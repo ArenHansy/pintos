@@ -341,9 +341,13 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
-  if(new_priority < list_entry (list_max(&ready_list, priority_less, NULL), struct thread, elem)->priority)
+  enum intr_level old_level = intr_disable ();
+  struct thread *cur = thread_current ();
+  cur->own_priority = new_priority;
+  cur->priority = new_priority;
+  if (new_priority < get_max_ready_queue()->priority)
     thread_yield();
+  intr_set_level (old_level);
 }
 
 /* Returns the current thread's priority. */
@@ -469,7 +473,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  t->priority = priority;
+  t->priority = t->own_priority = priority;
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
@@ -659,7 +663,14 @@ struct thread *
 pop_ready_queue ()
 {
 //  return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  struct thread *max = get_max_ready_queue();
+  list_remove (&max->elem);
+  return max;
+}
+
+struct thread *
+get_max_ready_queue()
+{
   struct list_elem * max = list_max (&ready_list, priority_less, NULL);
-  list_remove (max);
   return list_entry (max, struct thread, elem);
 }

@@ -102,6 +102,7 @@ struct thread
     unsigned magic;                     /* Detects stack overflow. */
 
     int64_t wakeup_ticks;
+    int own_priority;
   };
 
 /* If false (default), use round-robin scheduler.
@@ -122,6 +123,7 @@ void thread_awake (int64_t current_ticks);
 bool priority_less (const struct list_elem *, const struct list_elem *, void *);
 bool priority_more (const struct list_elem *, const struct list_elem *, void *);
 void push_ready_queue (struct thread *);
+struct thread *get_max_ready_queue();
 struct thread *pop_ready_queue ();
 
 typedef void thread_func (void *aux);

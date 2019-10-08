@@ -197,8 +197,11 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+  enum intr_level old_level = intr_disable ();
+  donate_lock_priority (lock);
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
+  intr_set_level (old_level);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -232,8 +235,11 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
+  enum intr_level old_level = intr_disable ();
+  restore_lock_priority (lock);
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+  intr_set_level (old_level);
 }
 
 /* Returns true if the current thread holds LOCK, false
@@ -355,3 +361,27 @@ pop_waiting_queue (struct semaphore *sema)
   list_remove (max);
   return max;
 }
+
+void
+donate_lock_priority(struct lock *lock)
+{
+  if (!lock->holder)
+    return;
+
+  struct thread *cur = thread_current ();
+  struct thread *holder = lock->holder;
+  if (cur->priority > holder->priority)
+  {
+    holder->priority = cur->priority;
+  }
+}
+
+void
+restore_lock_priority(struct lock *lock)
+{
+  struct thread *holder = lock->holder;
+  holder->priority = holder->own_priority;
+}
+
+
+
