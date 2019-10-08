@@ -104,6 +104,7 @@ struct thread
     int64_t wakeup_ticks;
     int own_priority;
     struct list lock_list;
+    struct lock *lock_demand;
   };
 
 /* If false (default), use round-robin scheduler.
