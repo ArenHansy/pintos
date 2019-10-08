@@ -53,6 +53,9 @@ void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
 
+void push_condition_queue (struct condition *, struct list_elem *);
+struct semaphore *pop_condition_queue (struct condition *);
+
 /* Optimization barrier.
 
    The compiler will not reorder operations across an
