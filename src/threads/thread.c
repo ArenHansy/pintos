@@ -344,8 +344,7 @@ thread_set_priority (int new_priority)
   enum intr_level old_level = intr_disable ();
   struct thread *cur = thread_current ();
   cur->own_priority = new_priority;
-  int max_lock_priority = get_max_lock_priority ();
-  cur->priority = new_priority < max_lock_priority ? max_lock_priority : new_priority;
+  cur->priority = get_max_lock_priority (new_priority);
   if (new_priority < get_max_ready_queue()->priority)
     thread_yield();
   intr_set_level (old_level);

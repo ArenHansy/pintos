@@ -240,7 +240,7 @@ lock_release (struct lock *lock)
   enum intr_level old_level = intr_disable ();
   list_remove(&lock->elem);
   struct thread *cur = thread_current ();
-  cur->priority = get_max_lock_priority();
+  cur->priority = get_max_lock_priority (cur->own_priority);
   restore_lock_priority (lock);
   lock->holder = NULL;
   sema_up (&lock->semaphore);
@@ -398,11 +398,12 @@ donate_lock_priority(struct lock *lock)
 }
 
 int
-get_max_lock_priority ()
+get_max_lock_priority (int min_value)
 {
   struct thread *cur = thread_current ();
   struct list_elem * max = list_max (&cur->lock_list, lock_priority_less, NULL);
-  return list_entry (max, struct lock, elem)->semaphore.max_priority;
+  int max_priority = list_entry (max, struct lock, elem)->semaphore.max_priority;
+  return min_value < max_priority ? max_priority : min_value;
 }
 
 bool
@@ -416,7 +417,7 @@ void
 restore_lock_priority(struct lock *lock)
 {
   struct thread *holder = lock->holder;
-  holder->priority = holder->own_priority;
+  holder->priority = get_max_lock_priority (holder->own_priority);
 }
 
 

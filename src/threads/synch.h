@@ -39,7 +39,7 @@ bool lock_held_by_current_thread (const struct lock *);
 
 void donate_lock_priority(struct lock *lock);
 bool lock_priority_less (const struct list_elem *, const struct list_elem *, void *);
-int get_max_lock_priority ();
+int get_max_lock_priority (int);
 void restore_lock_priority(struct lock *lock);
 
 /* Condition variable. */
