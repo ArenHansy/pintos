@@ -344,7 +344,8 @@ thread_set_priority (int new_priority)
   enum intr_level old_level = intr_disable ();
   struct thread *cur = thread_current ();
   cur->own_priority = new_priority;
-  cur->priority = new_priority;
+  int max_lock_priority = get_max_lock_priority ();
+  cur->priority = new_priority < max_lock_priority ? max_lock_priority : new_priority;
   if (new_priority < get_max_ready_queue()->priority)
     thread_yield();
   intr_set_level (old_level);
@@ -478,6 +479,7 @@ init_thread (struct thread *t, const char *name, int priority)
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
+  list_init(&t->lock_list);
   intr_set_level (old_level);
 }
 
@@ -660,17 +662,17 @@ push_ready_queue (struct thread *t)
 }
 
 struct thread *
+get_max_ready_queue()
+{
+  struct list_elem * max = list_max (&ready_list, priority_less, NULL);
+  return list_entry (max, struct thread, elem);
+}
+
+struct thread *
 pop_ready_queue ()
 {
 //  return list_entry (list_pop_front (&ready_list), struct thread, elem);
   struct thread *max = get_max_ready_queue();
   list_remove (&max->elem);
   return max;
-}
-
-struct thread *
-get_max_ready_queue()
-{
-  struct list_elem * max = list_max (&ready_list, priority_less, NULL);
-  return list_entry (max, struct thread, elem);
 }

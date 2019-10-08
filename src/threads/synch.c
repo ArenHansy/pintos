@@ -114,8 +114,7 @@ sema_up (struct semaphore *sema)
 
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters)) 
-    thread_unblock (list_entry (pop_waiting_queue (sema),
-                                struct thread, elem));
+    thread_unblock (pop_waiting_queue (sema));
   sema->value++;
   intr_set_level (old_level);
   thread_yield();
@@ -200,7 +199,10 @@ lock_acquire (struct lock *lock)
   enum intr_level old_level = intr_disable ();
   donate_lock_priority (lock);
   sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+
+  struct thread *cur = thread_current ();
+  lock->holder = cur;
+  list_push_back(&cur->lock_list, &lock->elem);
   intr_set_level (old_level);
 }
 
@@ -236,6 +238,9 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   enum intr_level old_level = intr_disable ();
+  list_remove(&lock->elem);
+  struct thread *cur = thread_current ();
+  cur->priority = get_max_lock_priority();
   restore_lock_priority (lock);
   lock->holder = NULL;
   sema_up (&lock->semaphore);
@@ -351,14 +356,30 @@ push_waiting_queue (struct semaphore *sema, struct list_elem *elem)
 {
   list_push_back (&sema->waiters, elem);
 //  list_insert_ordered (&sema->waiters, elem, priority_more, NULL);
+  update_max_priority(sema);
 }
 
-struct list_elem *
+struct thread *
+get_max_waiting_queue (struct semaphore *sema)
+{
+  struct list_elem * max = list_max (&sema->waiters, priority_less, NULL);
+  return list_entry (max, struct thread, elem);
+}
+
+void
+update_max_priority (struct semaphore *sema)
+{
+  struct thread *max = get_max_waiting_queue (sema);
+  sema->max_priority = max->priority;
+}
+
+struct thread *
 pop_waiting_queue (struct semaphore *sema)
 {
 //  list_pop_front (&sema->waiters);
-  struct list_elem *max = list_max (&sema->waiters, priority_less, NULL);
-  list_remove (max);
+  struct thread *max = get_max_waiting_queue (sema);
+  list_remove (&max->elem);
+  update_max_priority (sema);
   return max;
 }
 
@@ -374,6 +395,21 @@ donate_lock_priority(struct lock *lock)
   {
     holder->priority = cur->priority;
   }
+}
+
+int
+get_max_lock_priority ()
+{
+  struct thread *cur = thread_current ();
+  struct list_elem * max = list_max (&cur->lock_list, lock_priority_less, NULL);
+  return list_entry (max, struct lock, elem)->semaphore.max_priority;
+}
+
+bool
+lock_priority_less (const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED)
+{
+  return list_entry (a_, struct lock, elem)->semaphore.max_priority
+         < list_entry (b_, struct lock, elem)->semaphore.max_priority;
 }
 
 void
