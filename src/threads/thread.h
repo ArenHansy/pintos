@@ -24,6 +24,10 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+#define NICE_MIN 20
+#define NICE_DEFAULT 0
+#define NICE_MAX 20
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -105,7 +109,9 @@ struct thread
     int own_priority;
     struct list lock_list;
     struct lock *lock_demand;
-  };
+    int nice;
+    int recent_cpu;
+};
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -152,5 +158,7 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+void mlfqs_priority(struct thread *);
 
 #endif /* threads/thread.h */
