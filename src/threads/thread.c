@@ -204,6 +204,9 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  if (priority > thread_current()->priority)
+    thread_yield();
+
   return tid;
 }
 
@@ -240,7 +243,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  push_ready_queue (t);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -310,8 +313,8 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+  if (cur != idle_thread)
+    push_ready_queue (cur);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -496,7 +499,7 @@ next_thread_to_run (void)
   if (list_empty (&ready_list))
     return idle_thread;
   else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    return pop_ready_queue ();
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -591,8 +594,11 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 bool
 wakeup_ticks_less (const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED)
 {
-  return list_entry (a_, struct thread, elem)->wakeup_ticks
-      < list_entry (b_, struct thread, elem)->wakeup_ticks;
+  const struct thread *a = list_entry (a_, struct thread, elem);
+  const struct thread *b = list_entry (b_, struct thread, elem);
+  return a->wakeup_ticks < b->wakeup_ticks
+    || (a->wakeup_ticks == b->wakeup_ticks
+        && b->priority < a->priority);
 }
 
 void
@@ -624,4 +630,34 @@ thread_awake (int64_t current_ticks)
   }
 }
 
+//
 
+bool
+priority_less (const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED)
+{
+  return list_entry (a_, struct thread, elem)->priority
+       < list_entry (b_, struct thread, elem)->priority;
+}
+
+bool
+priority_more (const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED)
+{
+  return list_entry (a_, struct thread, elem)->priority
+      > list_entry (b_, struct thread, elem)->priority;
+}
+
+void
+push_ready_queue (struct thread *t)
+{
+  list_push_back (&ready_list, &t->elem);
+//  list_insert_ordered(&ready_list, &t->elem, priority_more, NULL);
+}
+
+struct thread *
+pop_ready_queue ()
+{
+//  return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  struct list_elem * max = list_max (&ready_list, priority_less, NULL);
+  list_remove (max);
+  return list_entry (max, struct thread, elem);
+}

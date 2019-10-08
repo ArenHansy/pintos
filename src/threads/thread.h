@@ -115,8 +115,14 @@ void thread_start (void);
 void thread_tick (void);
 void thread_print_stats (void);
 
+bool wakeup_ticks_less (const struct list_elem *, const struct list_elem *, void *);
 void thread_sleep (int64_t awake_ticks);
 void thread_awake (int64_t current_ticks);
+
+bool priority_less (const struct list_elem *, const struct list_elem *, void *);
+bool priority_more (const struct list_elem *, const struct list_elem *, void *);
+void push_ready_queue (struct thread *);
+struct thread *pop_ready_queue ();
 
 typedef void thread_func (void *aux);
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
