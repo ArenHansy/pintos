@@ -398,6 +398,7 @@ donate_lock_priority(struct lock *lock)
     if (holder->lock_demand)
       donate_lock_priority(holder->lock_demand);
   }
+  update_max_priority(&lock->semaphore);
 }
 
 int
