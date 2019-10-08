@@ -100,6 +100,8 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+
+    int64_t wakeup_ticks;
   };
 
 /* If false (default), use round-robin scheduler.
@@ -112,6 +114,9 @@ void thread_start (void);
 
 void thread_tick (void);
 void thread_print_stats (void);
+
+void thread_sleep (int64_t awake_ticks);
+void thread_awake (int64_t current_ticks);
 
 typedef void thread_func (void *aux);
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
