@@ -28,9 +28,6 @@ typedef int tid_t;
 #define NICE_DEFAULT 0
 #define NICE_MAX 20
 
-#define RECENT_CPU_DEFAULT 0
-#define LOAD_AVG_DEFAULT 0
-
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The

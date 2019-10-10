@@ -385,7 +385,7 @@ pop_waiting_queue (struct semaphore *sema)
 void
 donate_lock_priority(struct lock *lock)
 {
-  if (!lock->holder || thread_mlfqs)
+  if (!lock->holder)
     return;
 
   struct thread *cur = thread_current ();
@@ -418,8 +418,6 @@ lock_priority_less (const struct list_elem *a_, const struct list_elem *b_, void
 void
 restore_lock_priority(struct lock *lock)
 {
-  if (thread_mlfqs)
-    return;
   struct thread *cur = thread_current ();
   cur->priority = get_max_lock_priority (cur->own_priority);
   struct thread *holder = lock->holder;
