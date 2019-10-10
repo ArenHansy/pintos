@@ -11,7 +11,6 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
-#include "threads/fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -365,7 +364,6 @@ thread_set_nice (int nice UNUSED)
   enum intr_level old_level = intr_disable ();
   struct thread *cur = thread_current ();
   cur->nice = nice;
-  mlfqs_priority (cur);
   thread_yield ();
   intr_set_level (old_level);
 }
@@ -682,18 +680,3 @@ pop_ready_queue ()
   return max;
 }
 
-void
-mlfqs_priority(struct thread *t)
-{
-  if (t == idle_thread)
-    return;
-
-  int fp_pri = int_to_fp(PRI_MAX);
-  int fp_recent_cpu = div_mixed(t->recent_cpu, 4);
-  int fp_nice = int_to_fp(2 * t->nice);
-  int fp_priority = fp_pri;
-  fp_priority = sub_fp(fp_priority, fp_recent_cpu);
-  fp_priority = sub_fp(fp_priority, fp_nice);
-  int int_pri = fp_to_int(fp_priority);
-  t->priority = int_pri < PRI_MIN ? PRI_MIN : PRI_MAX < int_pri ? PRI_MAX : int_pri;
-}
