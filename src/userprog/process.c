@@ -17,6 +17,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -39,7 +40,7 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
 
   char *save_ptr;
-  char *thread_name = strtok_r(file_name, " ", &save_ptr);
+  char *thread_name = strtok_r((char*)file_name, " ", &save_ptr);
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (thread_name, PRI_DEFAULT, start_process, fn_copy);
@@ -228,11 +229,24 @@ load (const char *file_name, void (**eip) (void), void **esp)
     goto done;
   process_activate ();
 
+  struct list argv_list;
+  list_init(&argv_list);
+
+  char *token, *save_ptr;
+  for (token = strtok_r ((char*)file_name, " ", &save_ptr); token != NULL;
+       token = strtok_r (NULL, " ", &save_ptr))
+  {
+    struct argv_elem *argv = malloc(sizeof (struct argv_elem));
+    argv->value = token;
+    list_push_back(&argv_list, &argv->elem);
+  }
+
   /* Open executable file. */
-  file = filesys_open (file_name);
+  char *open_name = list_entry (list_front(&argv_list), struct argv_elem, elem)->value;
+  file = filesys_open (open_name);
   if (file == NULL) 
     {
-      printf ("load: %s: open failed\n", file_name);
+      printf ("load: %s: open failed\n", open_name);
       goto done; 
     }
 
@@ -319,7 +333,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
+//  if (success)
+//  {
+//
+//  }
+//  else
+    file_close (file);
   return success;
 }
 
