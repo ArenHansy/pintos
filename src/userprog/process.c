@@ -337,6 +337,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   {
     file_deny_write(thread_current()->sys_file = file);
 
+    int start_esp = *(uint32_t **)esp;
     int argc = list_size(&argv_list);
     int argv_values_len = 0;
     list_reverse(&argv_list);
@@ -377,6 +378,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
     // push fake return address
     *esp -= WORD_SIZE;
     **(uint32_t **)esp = 0;
+    int end_esp = *(uint32_t **)esp;
+//    hex_dump(*esp, *esp, start_esp - end_esp, 1);
   }
   else
     file_close (file);
