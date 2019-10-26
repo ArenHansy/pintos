@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "filesys/file.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -102,6 +103,7 @@ struct thread
     unsigned magic;                     /* Detects stack overflow. */
 
     int exit_code;
+    struct file *sys_file;
   };
 
 /* If false (default), use round-robin scheduler.

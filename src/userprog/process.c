@@ -104,6 +104,7 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
+  file_close(thread_current()->sys_file);
   printf ("%s: exit(%d)\n", cur->name, cur->exit_code);
 
   /* Destroy the current process's page directory and switch back
@@ -333,11 +334,11 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-//  if (success)
-//  {
-//
-//  }
-//  else
+  if (success)
+  {
+    file_deny_write(thread_current()->sys_file = file);
+  }
+  else
     file_close (file);
   return success;
 }
