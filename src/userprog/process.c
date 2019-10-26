@@ -370,8 +370,9 @@ load (const char *file_name, void (**eip) (void), void **esp)
       free(argv);
     }
     // push argvs address
+    uint32_t argvs_address = *esp;
     *esp -= WORD_SIZE;
-    **(uint32_t **)esp = *(uint32_t **)esp + WORD_SIZE;
+    **(uint32_t **)esp = argvs_address;
     // push argc
     *esp -= WORD_SIZE;
     **(uint32_t **)esp = argc;
