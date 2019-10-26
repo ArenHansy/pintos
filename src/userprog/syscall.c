@@ -158,6 +158,7 @@ void halt (void)
 
 void exit (int status)
 {
+  thread_current()->exit_code = status;
   thread_exit();
 }
 
