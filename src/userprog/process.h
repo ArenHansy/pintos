@@ -10,8 +10,6 @@ struct argv_elem
     struct list_elem elem;
 };
 
-static const int WORD_SIZE = 4;
-
 tid_t process_execute (const char *file_name);
 int process_wait (tid_t);
 void process_exit (void);
