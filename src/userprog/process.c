@@ -93,7 +93,7 @@ int
 process_wait (tid_t child_tid UNUSED) 
 {
   int i;
-  for (i = 0; i < 10000000; i++);
+  for (i = 0; i < 100000000; i++);
   return -1;
 }
 
@@ -234,8 +234,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   list_init(&argv_list);
 
   char *token, *save_ptr;
-  for (token = strtok_r ((char*)file_name, " ", &save_ptr); token != NULL;
-       token = strtok_r (NULL, " ", &save_ptr))
+  for (token = strtok_r ((char*)file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr))
   {
     struct argv_elem *argv = malloc(sizeof (struct argv_elem));
     argv->value = token;
@@ -337,6 +336,47 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (success)
   {
     file_deny_write(thread_current()->sys_file = file);
+
+    int argc = list_size(&argv_list);
+    int argv_values_len = 0;
+    list_reverse(&argv_list);
+    struct list_elem *cur;
+    struct list_elem *end = list_end (&argv_list);
+
+    // push argv value
+    for (cur = list_begin (&argv_list); cur != end; cur = list_next (cur))
+    {
+      struct argv_elem *argv = list_entry (cur, struct argv_elem, elem);
+      int argv_size = strlen(argv->value) + 1;
+      argv_values_len += argv_size;
+
+      *esp -= argv_size;
+      strlcpy(*esp, argv->value, argv_size);
+      argv->address = *(uint32_t **)esp;
+    }
+    // push word align
+    *esp -= (WORD_SIZE - argv_values_len % WORD_SIZE) % WORD_SIZE;
+    // push NULL
+    *esp -= 4;
+    **(uint32_t **)esp = 0;
+    // push argv address
+    while (!list_empty (&argv_list))
+    {
+      struct list_elem *list_elem = list_pop_front (&argv_list);
+      struct argv_elem *argv = list_entry (list_elem, struct argv_elem, elem);
+      *esp -= WORD_SIZE;
+      **(uint32_t **)esp = argv->address;
+      free(argv);
+    }
+    // push argvs address
+    *esp -= WORD_SIZE;
+    **(uint32_t **)esp = *(uint32_t **)esp + WORD_SIZE;
+    // push argc
+    *esp -= WORD_SIZE;
+    **(uint32_t **)esp = argc;
+    // push fake return address
+    *esp -= WORD_SIZE;
+    **(uint32_t **)esp = 0;
   }
   else
     file_close (file);

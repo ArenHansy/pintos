@@ -6,8 +6,11 @@
 struct argv_elem
 {
     char *value;
+    uint32_t address;
     struct list_elem elem;
 };
+
+static const int WORD_SIZE = 4;
 
 tid_t process_execute (const char *file_name);
 int process_wait (tid_t);
