@@ -102,7 +102,6 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 
-    int exit_code;
     struct file *sys_file;
   };
 

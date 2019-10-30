@@ -105,7 +105,6 @@ process_exit (void)
   uint32_t *pd;
 
   file_close(cur->sys_file);
-  printf ("%s: exit(%d)\n", cur->name, cur->exit_code);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
