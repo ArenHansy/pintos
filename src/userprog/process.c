@@ -94,7 +94,7 @@ process_wait (tid_t child_tid UNUSED)
 {
   int i;
   for (i = 0; i < 100000000; i++);
-  return -1;
+  return -100; // TODO -1 return하면 test 통관되는 경우 있음
 }
 
 /* Free the current process's resources. */

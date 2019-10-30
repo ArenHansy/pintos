@@ -4,6 +4,8 @@
 #include <threads/vaddr.h>
 #include <threads/synch.h>
 #include <lib/user/syscall.h>
+#include <filesys/filesys.h>
+#include <devices/input.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "devices/shutdown.h"
@@ -175,47 +177,86 @@ syscall_handler_file (struct intr_frame *f UNUSED, int system_call_num, int *arg
 {
   switch (system_call_num) {
     case SYS_CREATE:
+      f->eax = create((const char *) argv[0], argv[1]);
       break;
     case SYS_REMOVE:
+      f->eax = remove((const char *) argv[0]);
       break;
     case SYS_OPEN:
+//      f->eax = open((const char *) argv[0]);
       break;
     case SYS_FILESIZE:
+//      f->eax = filesize(argv[0]);
       break;
     case SYS_READ:
+      f->eax = read(argv[0], (void *) argv[1], argv[2]);
       break;
     case SYS_WRITE:
-    {
-      int fd = argv[0];
-      void *buffer = argv[1];
-      int size = argv[2];
-      if (fd == STDOUT_FILENO)
-      {
-        putbuf(buffer, size);
-      }
-      f->eax = size;
+      f->eax = write(argv[0], (const void *) argv[1], argv[2]);
       break;
-    }
     case SYS_SEEK:
+//      seek(argv[0], argv[1]);
       break;
     case SYS_TELL:
+//      f->eax = tell(argv[0]);
       break;
     case SYS_CLOSE:
+//      close(argv[0]);
       break;
   }
   return true;
 }
 
 
-bool create (const char *file, unsigned initial_size);
-bool remove (const char *file);
-int open (const char *file);
-int filesize (int fd);
-int read (int fd, void *buffer, unsigned length);
-int write (int fd, const void *buffer, unsigned length);
-void seek (int fd, unsigned position);
-unsigned tell (int fd);
-void close (int fd);
+bool create (const char *file, unsigned initial_size)
+{
+  return filesys_create(file, initial_size);
+}
+
+bool remove (const char *file)
+{
+  return filesys_remove(file);
+}
+
+int open (const char *file); // TODO
+
+int filesize (int fd); // TODO
+
+int read (int fd, void *buffer, unsigned length)
+{
+  if (fd == STDIN_FILENO)
+  {
+    uint8_t* local_buffer = (uint8_t *) buffer;
+    for (unsigned i = 0; i < length; i++)
+    {
+      local_buffer[i] = input_getc();
+    }
+    return length;
+  }
+  else
+  {
+    // TODO fd
+    return 0;
+  }
+}
+
+int write (int fd, const void *buffer, unsigned length)
+{
+  if (fd == STDOUT_FILENO)
+  {
+    putbuf(buffer, length);
+    return length;
+  }
+  else
+  {
+    // TODO fd
+    return 0;
+  }
+}
+
+void seek (int fd, unsigned position); // TODO fd
+unsigned tell (int fd); // TODO fd
+void close (int fd); // TODO fd
 
 //
 
