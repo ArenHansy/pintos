@@ -8,6 +8,7 @@
 #include "threads/thread.h"
 #include "devices/shutdown.h"
 #include "pagedir.h"
+#include "process.h"
 
 
 struct lock filesys_lock;
@@ -45,8 +46,10 @@ syscall_handler (struct intr_frame *f UNUSED)
       exit(argv[0]);
       break;
     case SYS_EXEC:
+      f->eax = exec((const char *) argv[0]);
       break;
     case SYS_WAIT:
+      f->eax = wait(argv[0]);
       break;
     case SYS_CREATE:
     case SYS_REMOVE:
@@ -154,8 +157,16 @@ void exit (int status)
   thread_exit();
 }
 
-pid_t exec (const char *file);
-int wait (pid_t);
+pid_t exec (const char *file)
+{
+  pid_t pid = process_execute(file);
+  return pid;
+}
+
+int wait (pid_t pid)
+{
+  return process_wait(pid);
+}
 
 //
 
