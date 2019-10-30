@@ -4,6 +4,9 @@
 #include <stdbool.h>
 #include <debug.h>
 
+#define ERROR -1
+#define USER_VADDR_START (void*) 0x08048000
+
 /* Process identifier. */
 typedef int pid_t;
 #define PID_ERROR ((pid_t) -1)

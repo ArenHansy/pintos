@@ -10,9 +10,6 @@
 #include "pagedir.h"
 
 
-#define ERROR -1
-#define USER_VADDR_START (void*) 0x08048000
-
 struct lock filesys_lock;
 
 static void syscall_handler (struct intr_frame *);
@@ -41,23 +38,16 @@ syscall_handler (struct intr_frame *f UNUSED)
   update_argv_page(system_call_num, argv);
 
   switch (system_call_num) {
-    case SYS_HALT: {
+    case SYS_HALT:
       halt();
       break;
-    }
     case SYS_EXIT:
-    {
       exit(argv[0]);
       break;
-    }
     case SYS_EXEC:
-    {
       break;
-    }
     case SYS_WAIT:
-    {
       break;
-    }
     case SYS_CREATE:
     case SYS_REMOVE:
     case SYS_OPEN:
@@ -67,13 +57,14 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_SEEK:
     case SYS_TELL:
     case SYS_CLOSE:
-    {
       lock_acquire(&filesys_lock);
       bool success = syscall_handler_file(f, system_call_num, argv);
       lock_release(&filesys_lock);
       if (!success)
         exit(ERROR);
-    }
+      break;
+    default:
+      break;
   }
 }
 
