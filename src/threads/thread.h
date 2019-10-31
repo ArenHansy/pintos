@@ -102,6 +102,10 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 
+    tid_t parent_tid;
+    struct list child_list;
+    struct process_info *process_info;
+
     struct file *sys_file;
   };
 

@@ -19,6 +19,7 @@
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
+#define NO_PARENT 0
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -197,6 +198,10 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
+
+  t->parent_tid = thread_tid();
+  struct process_info *process_info = add_child_process(t->tid);
+  t->process_info = process_info;
 
   /* Add to run queue. */
   thread_unblock (t);
@@ -466,6 +471,9 @@ init_thread (struct thread *t, const char *name, int priority)
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
+  list_init(&t->child_list);
+  t->process_info = NULL;
+  t->parent_tid = NO_PARENT;
   intr_set_level (old_level);
 }
 

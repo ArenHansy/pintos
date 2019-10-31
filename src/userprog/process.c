@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads/synch.h>
+#include "userprog/syscall.h"
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
@@ -92,9 +94,17 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  int i;
-  for (i = 0; i < 100000000; i++);
-  return -100; // TODO -1 return하면 test 통관되는 경우 있음
+  struct process_info* process_info = get_child_process(child_tid);
+  if (!process_info)
+    return ERROR;
+  if (process_info->wait)
+    return ERROR;
+  process_info->wait = true;
+  while (!process_info->exit)
+    barrier();
+  int status = process_info->status;
+  remove_child_process_by_info(process_info);
+  return status;
 }
 
 /* Free the current process's resources. */
@@ -105,6 +115,8 @@ process_exit (void)
   uint32_t *pd;
 
   file_close(cur->sys_file);
+  remove_all_child_process();
+  cur->process_info->exit = true;
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -532,4 +544,54 @@ install_page (void *upage, void *kpage, bool writable)
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
+}
+
+struct process_info* add_child_process(pid_t pid)
+{
+  struct process_info* cp = malloc(sizeof(struct process_info));
+  cp->pid = pid;
+  cp->wait = false;
+  cp->exit = false;
+  list_push_back(&thread_current()->child_list, &cp->elem);
+  return cp;
+}
+
+struct process_info* get_child_process(pid_t pid)
+{
+  struct thread *cur = thread_current();
+  struct list_elem *elem = list_begin (&cur->child_list);
+
+  while (elem != list_end (&cur->child_list))
+  {
+    struct process_info *process_info = list_entry (elem, struct process_info, elem);
+    if (pid == process_info->pid)
+      return process_info;
+    elem = list_next(elem);
+  }
+  return NULL;
+}
+
+void remove_child_process_by_pid(pid_t pid)
+{
+  remove_child_process_by_info(get_child_process(pid));
+}
+
+void remove_child_process_by_info(struct process_info *process_info)
+{
+  if (!process_info)
+    return;
+  list_remove(&process_info->elem);
+  free(process_info);
+}
+
+void remove_all_child_process()
+{
+  struct thread *cur = thread_current();
+  struct list_elem *elem = list_begin(&cur->child_list);
+
+  while (elem != list_end (&cur->child_list))
+  {
+    remove_child_process_by_info(list_entry (elem, struct process_info, elem));
+    elem = list_next(elem);
+  }
 }
