@@ -474,6 +474,8 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->child_list);
   t->process_info = NULL;
   t->parent_tid = NO_PARENT;
+  list_init(&t->file_list);
+  t->next_fd = 2;
   intr_set_level (old_level);
 }
 

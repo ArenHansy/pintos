@@ -67,6 +67,11 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
+  if(success)
+    thread_current()->process_info->load = 1;
+  else
+    thread_current()->process_info->load = -1;
+
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
@@ -552,6 +557,7 @@ struct process_info* add_child_process(pid_t pid)
   cp->pid = pid;
   cp->wait = false;
   cp->exit = false;
+  cp->load = 0;
   list_push_back(&thread_current()->child_list, &cp->elem);
   return cp;
 }

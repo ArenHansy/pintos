@@ -8,6 +8,7 @@ void syscall_init (void);
 
 struct process_info {
     pid_t pid;
+    int load;
     int status;
     bool wait;
     bool exit;

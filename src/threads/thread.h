@@ -106,7 +106,16 @@ struct thread
     struct list child_list;
     struct process_info *process_info;
 
+    int next_fd;
+    struct list file_list;
     struct file *sys_file;
+  };
+
+struct file_info
+  {
+    struct file *f;
+    int fd;
+    struct list_elem file_elem;
   };
 
 /* If false (default), use round-robin scheduler.
