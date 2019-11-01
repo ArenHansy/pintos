@@ -1,4 +1,4 @@
-# -*- makefile -*-
+# -*- makefile -*- 
 
 tests/%.output: FILESYSSOURCE = --filesys-size=2
 tests/%.output: PUTFILES = $(filter-out kernel.bin loader.bin, $^)
