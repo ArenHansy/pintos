@@ -21,12 +21,28 @@ int args_count(int system_call_num);
 void parse_argv(int* esp, int* argv, int count);
 void check_valid_address (void* vaddr);
 void update_argv_page(int system_call_num, int* argv);
+struct file_info* list_get_file(int fd);
 
 void
 syscall_init (void)
 {
   lock_init(&filesys_lock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+}
+
+struct file_info*
+list_get_file (int fd)
+{
+  struct file_info* fi = NULL;
+  struct list_elem *e;
+  struct thread *t = thread_current();
+  for(e = list_begin(&t->file_list); e != list_end(&t->file_list); e = list_next(e))
+  {
+    fi = list_entry(e, struct file_info, file_elem);
+    if (fd == fi->fd)
+      return fi;
+  }
+  return NULL;
 }
 
 static void
@@ -184,10 +200,10 @@ syscall_handler_file (struct intr_frame *f UNUSED, int system_call_num, int *arg
       f->eax = remove((const char *) argv[0]);
       break;
     case SYS_OPEN:
-//      f->eax = open((const char *) argv[0]);
+      f->eax = open((const char *) argv[0]);
       break;
     case SYS_FILESIZE:
-//      f->eax = filesize(argv[0]);
+      f->eax = filesize(argv[0]);
       break;
     case SYS_READ:
       f->eax = read(argv[0], (void *) argv[1], argv[2]);
@@ -196,13 +212,13 @@ syscall_handler_file (struct intr_frame *f UNUSED, int system_call_num, int *arg
       f->eax = write(argv[0], (const void *) argv[1], argv[2]);
       break;
     case SYS_SEEK:
-//      seek(argv[0], argv[1]);
+      seek(argv[0], argv[1]);
       break;
     case SYS_TELL:
-//      f->eax = tell(argv[0]);
+      f->eax = tell(argv[0]);
       break;
     case SYS_CLOSE:
-//      close(argv[0]);
+      close(argv[0]);
       break;
   }
   return true;
@@ -219,9 +235,29 @@ bool remove (const char *file)
   return filesys_remove(file);
 }
 
-int open (const char *file); // TODO
+int open (const char *file)
+{
+  struct thread *t = thread_current();
+  struct file *f = filesys_open(file);
+  if(f == NULL)
+    return -1;
+  else {
+   struct file_info *fi = malloc(sizeof(struct file_info));
+   fi->fd = t->next_fd++;
+   fi->f = f;
+   list_push_back(&t->file_list, &fi->file_elem);
+   return fi->fd;
+  }
+}	
 
-int filesize (int fd); // TODO
+int filesize (int fd)
+{
+  struct file_info *fi = list_get_file(fd);
+  if(fi == NULL)
+    return -1;
+  else
+    return file_length(fi->f);
+}
 
 int read (int fd, void *buffer, unsigned length)
 {
@@ -236,8 +272,11 @@ int read (int fd, void *buffer, unsigned length)
   }
   else
   {
-    // TODO fd
-    return 0;
+    struct file_info *fi = list_get_file(fd);
+    if(fi == NULL)
+      return -1;
+    else
+      return file_read(fi->f, buffer, length);
   }
 }
 
@@ -250,14 +289,38 @@ int write (int fd, const void *buffer, unsigned length)
   }
   else
   {
-    // TODO fd
-    return 0;
+    struct file_info *fi = list_get_file(fd);
+    if(fi == NULL)
+      return 0;
+    else
+      return file_write(fi->f, buffer, length);
   }
 }
 
-void seek (int fd, unsigned position); // TODO fd
-unsigned tell (int fd); // TODO fd
-void close (int fd); // TODO fd
+void seek (int fd, unsigned position)
+{
+  struct file_info *fi = list_get_file(fd);
+  if(fi != NULL)
+    file_seek(fi->f, position);
+}
+unsigned tell (int fd)
+{
+  struct file_info *fi = list_get_file(fd);
+  if(fi == NULL)
+    return -1;
+  else
+    return file_tell(fi->f);
+}
+void close (int fd)
+{
+  struct file_info *fi = list_get_file(fd);
+  if(fi != NULL)
+  {
+    file_close(fi->f);
+    list_remove(&fi->file_elem);
+    free(fi);
+  }
+}
 
 //
 
