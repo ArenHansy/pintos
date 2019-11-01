@@ -67,10 +67,15 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
-  char *save_ptr;
-  char *thread_name = strtok_r((char*)file_name, " ", &save_ptr);
+  if(success)
+    thread_current()->process_info->load = 1;
+  else
+    thread_current()->process_info->load = -1;
+
+//  char *save_ptr;
+//  char *thread_name = strtok_r((char*)file_name, " ", &save_ptr);
   /* If load failed, quit. */
-  palloc_free_page (thread_name);
+  palloc_free_page (file_name);
   if (!success) 
     thread_exit ();
 
@@ -115,9 +120,22 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+  struct list_elem *e;
+  struct file_info *fi = NULL;
 
+/*  for(e = list_begin(&cur->file_list); e != list_end(&cur->file_list); e = list_next(e))
+  {
+    fi = list_entry(e, struct file_info, file_elem);
+    file_close(fi->f);
+    list_remove(&fi->file_elem);
+    free(fi);
+  } */
+ // if(cur->sys_file != NULL)  
   file_close(cur->sys_file);
+  
   remove_all_child_process();
+
+//  if(get_thread_by_tid(cur->parent_tid) != NULL)
   cur->process_info->exit = true;
 
   /* Destroy the current process's page directory and switch back
@@ -347,7 +365,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
  done:
   /* We arrive here whether the load is successful or not. */
   if (success)
-  {
+  { 
     file_deny_write(thread_current()->sys_file = file);
 
     int start_esp = *(uint32_t **)esp;
@@ -554,6 +572,7 @@ struct process_info* add_child_process(pid_t pid)
   cp->pid = pid;
   cp->wait = false;
   cp->exit = false;
+  cp->load = 0;
   list_push_back(&thread_current()->child_list, &cp->elem);
   return cp;
 }

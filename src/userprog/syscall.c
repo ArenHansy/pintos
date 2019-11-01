@@ -143,6 +143,8 @@ void update_argv_page(int system_call_num, int* argv)
     {
       const void * vaddr = (const void *) argv[0];
       int * paddr = pagedir_get_page(pagedir, vaddr);
+      if(is_kernel_vaddr(vaddr))
+        exit(ERROR);
       if (!paddr)
         exit(ERROR);
       argv[0] = (int) paddr;
@@ -153,6 +155,8 @@ void update_argv_page(int system_call_num, int* argv)
     {
       const void * vaddr = (const void *) argv[1];
       void * paddr = pagedir_get_page(pagedir, vaddr);
+      if(is_kernel_vaddr(vaddr))
+        exit(ERROR);
       if (!paddr)
         exit(ERROR);
       argv[1] = (int) paddr;
@@ -160,8 +164,6 @@ void update_argv_page(int system_call_num, int* argv)
     }
   }
 }
-
-//
 
 void halt (void)
 {
@@ -171,7 +173,8 @@ void halt (void)
 void exit (int status)
 {
   struct thread *cur = thread_current();
-  cur->process_info->status = status;
+  if(get_thread_by_tid(cur->parent_tid) != NULL)
+    cur->process_info->status = status;
   printf ("%s: exit(%d)\n", cur->name, status);
   thread_exit();
 }
@@ -179,6 +182,15 @@ void exit (int status)
 pid_t exec (const char *file)
 {
   pid_t pid = process_execute(file);
+  struct process_info *pi = get_child_process(pid);
+  if(pi == NULL)
+    return -1;
+  while (pi->load == 0)
+  {
+    barrier();
+  }
+  if(pi->load == -1)
+    return -1;
   return pid;
 }
 
@@ -187,7 +199,6 @@ int wait (pid_t pid)
   return process_wait(pid);
 }
 
-//
 
 bool
 syscall_handler_file (struct intr_frame *f UNUSED, int system_call_num, int *argv)
@@ -243,7 +254,8 @@ int open (const char *file)
     return -1;
   else {
    struct file_info *fi = malloc(sizeof(struct file_info));
-   fi->fd = t->next_fd++;
+   fi->fd = t->next_fd;
+   t->next_fd++;
    fi->f = f;
    list_push_back(&t->file_list, &fi->file_elem);
    return fi->fd;
@@ -291,7 +303,7 @@ int write (int fd, const void *buffer, unsigned length)
   {
     struct file_info *fi = list_get_file(fd);
     if(fi == NULL)
-      return 0;
+      return -1;
     else
       return file_write(fi->f, buffer, length);
   }
@@ -303,6 +315,7 @@ void seek (int fd, unsigned position)
   if(fi != NULL)
     file_seek(fi->f, position);
 }
+
 unsigned tell (int fd)
 {
   struct file_info *fi = list_get_file(fd);
@@ -311,6 +324,7 @@ unsigned tell (int fd)
   else
     return file_tell(fi->f);
 }
+
 void close (int fd)
 {
   struct file_info *fi = list_get_file(fd);
@@ -322,10 +336,12 @@ void close (int fd)
   }
 }
 
-//
-
 void check_valid_address(void* vaddr)
 {
+  if (!is_user_vaddr(vaddr+4) || vaddr == NULL || !pagedir_get_page(thread_current()->pagedir, vaddr))
+    exit(ERROR);
+  if(is_kernel_vaddr(vaddr))
+    exit(ERROR);
   if (is_user_vaddr(vaddr) && USER_VADDR_START <= vaddr)
     return;
   exit(ERROR);

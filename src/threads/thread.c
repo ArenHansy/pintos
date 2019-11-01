@@ -476,6 +476,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->next_fd = 2;
   t->process_info = NULL;
   t->parent_tid = NO_PARENT;
+  //t->sys_file = NULL;
   intr_set_level (old_level);
 }
 
@@ -574,6 +575,22 @@ schedule (void)
     prev = switch_threads (cur, next);
   thread_schedule_tail (prev);
 }
+
+struct thread*
+get_thread_by_tid(int tid)
+{
+  struct list_elem *e;
+  struct thread *t = NULL;
+  for(e = list_begin (&all_list); e != list_end(&all_list); e = list_next(e))
+  {
+    t = list_entry(e, struct thread, allelem);
+    if(t->tid == tid)     
+      return t;
+  }
+  return NULL;
+}
+
+
 
 /* Returns a tid to use for a new thread. */
 static tid_t
