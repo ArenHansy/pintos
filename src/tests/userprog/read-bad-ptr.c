@@ -9,8 +9,10 @@ void
 test_main (void) 
 {
   int handle;
+  printf("ggggggggggggggggggggggggggggg");
   CHECK ((handle = open ("sample.txt")) > 1, "open \"sample.txt\"");
-
+  printf("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
   read (handle, (char *) 0xc0100000, 123);
+  printf("bbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
   fail ("should not have survived read()");
 }
