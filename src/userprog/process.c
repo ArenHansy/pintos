@@ -67,14 +67,14 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
-  if(success)
+  if (success)
     thread_current()->process_info->load = 1;
   else
     thread_current()->process_info->load = -1;
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
+  if (!success)
     thread_exit ();
 
   /* Start the user process by simulating a return from an
@@ -120,6 +120,8 @@ process_exit (void)
   uint32_t *pd;
 
   file_close(cur->sys_file);
+  cur->sys_file = NULL;
+
   remove_all_child_process();
   cur->process_info->exit = true;
 

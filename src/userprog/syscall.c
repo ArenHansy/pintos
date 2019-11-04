@@ -87,7 +87,6 @@ syscall_handler (struct intr_frame *f UNUSED)
         exit(ERROR);
       break;
     default:
-      exit(ERROR);
       break;
   }
 }
@@ -184,13 +183,12 @@ pid_t exec (const char *file)
 {
   pid_t pid = process_execute(file);
   struct process_info *pi = get_child_process(pid);
-  if(pi == NULL)
+  if (pi == NULL)
     return ERROR;
   while (pi->load == 0)
-  {
     barrier();
-  }
-  if(pi->load == -1)
+
+  if (pi->load == -1)
     return ERROR;
   return pid;
 }
