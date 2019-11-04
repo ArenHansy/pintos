@@ -193,6 +193,7 @@ pid_t exec (const char *file)
   lock_acquire(&filesys_lock);
   pid_t pid = process_execute(file);
   lock_release(&filesys_lock);
+  
   struct process_info *pi = get_child_process(pid);
   if (pi == NULL)
     return ERROR;
