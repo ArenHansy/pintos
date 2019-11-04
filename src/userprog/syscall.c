@@ -6,6 +6,7 @@
 #include <lib/user/syscall.h>
 #include <filesys/filesys.h>
 #include <devices/input.h>
+#include <threads/malloc.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "devices/shutdown.h"
@@ -20,6 +21,7 @@ bool syscall_handler_file (struct intr_frame *, int system_call_num, int *argv);
 int args_count(int system_call_num);
 void parse_argv(int* esp, int* argv, int count);
 void check_valid_address (void* vaddr);
+void check_valid_buffer(void* buffer, int size);
 void update_argv_page(int system_call_num, int* argv);
 struct file_info* list_get_file(int fd);
 
@@ -152,6 +154,7 @@ void update_argv_page(int system_call_num, int* argv)
     case SYS_WRITE:
     {
       const void * vaddr = (const void *) argv[1];
+      check_valid_buffer(vaddr, argv[2]);
       void * paddr = pagedir_get_page(pagedir, vaddr);
       if (!paddr)
         exit(ERROR);
@@ -339,4 +342,13 @@ void check_valid_address(void* vaddr)
   if (is_user_vaddr(vaddr) && USER_VADDR_START <= vaddr)
     return;
   exit(ERROR);
+}
+
+void check_valid_buffer(void* buffer, int size)
+{
+  void* local_buffer = buffer;
+  for (int i = 0; i < size; i++)
+  {
+    check_valid_address(local_buffer + i);
+  }
 }
