@@ -87,6 +87,7 @@ syscall_handler (struct intr_frame *f UNUSED)
         exit(ERROR);
       break;
     default:
+      exit(ERROR);
       break;
   }
 }
