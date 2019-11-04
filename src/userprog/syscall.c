@@ -174,6 +174,15 @@ void halt (void)
 void exit (int status)
 {
   struct thread *cur = thread_current();
+
+  while (!list_empty (&cur->file_list))
+  {
+    struct list_elem *elem = list_begin (&cur->file_list);
+    struct file_info *file_info = list_entry (elem, struct file_info, file_elem);
+    lock_acquire(&filesys_lock);
+    close (file_info->fd);
+    lock_release(&filesys_lock);
+  }
   cur->process_info->status = status;
   printf ("%s: exit(%d)\n", cur->name, status);
   thread_exit();
