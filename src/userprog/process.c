@@ -44,6 +44,11 @@ process_execute (const char *file_name)
   char *save_ptr;
   char *thread_name = strtok_r((char*)file_name, " ", &save_ptr);
 
+  struct file *file = filesys_open(thread_name);
+  if (file == NULL)
+    return TID_ERROR;
+  file_close(file);
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (thread_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
