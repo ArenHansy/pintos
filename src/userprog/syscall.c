@@ -144,6 +144,9 @@ void update_argv_page(int system_call_num, int* argv)
     case SYS_OPEN:
     {
       const void * vaddr = (const void *) argv[0];
+      const char * caddr = (char*) vaddr;
+      while (*caddr != '\0')
+        caddr++;
       int * paddr = pagedir_get_page(pagedir, vaddr);
       if (!paddr)
         exit(ERROR);
