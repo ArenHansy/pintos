@@ -2,6 +2,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include "userprog/gdt.h"
+#include "userprog/signal.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
@@ -71,6 +72,10 @@ exception_print_stats (void)
 static void
 kill (struct intr_frame *f) 
 {
+  /* Send signal to its parent that he's killed */
+  send_signal(-1, SIG_WAIT);
+  printf ("%s: exit(%d)\n", thread_current()->name, -1);
+  
   /* This interrupt is one (probably) caused by a user process.
      For example, the process might have tried to access unmapped
      virtual memory (a page fault).  For now, we simply kill the
@@ -126,7 +131,7 @@ page_fault (struct intr_frame *f)
   bool write;        /* True: access was write, false: access was read. */
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
-
+  
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
      data.  It is not necessarily the address of the instruction
@@ -147,7 +152,14 @@ page_fault (struct intr_frame *f)
   not_present = (f->error_code & PF_P) == 0;
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
-
+  
+  if(!user) {
+    f->error_code = 0;
+    f->eip = (void (*)(void)) f->eax;
+    f->eax = -1;
+    return;
+  }
+  
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
@@ -156,6 +168,7 @@ page_fault (struct intr_frame *f)
           not_present ? "not present" : "rights violation",
           write ? "writing" : "reading",
           user ? "user" : "kernel");
+  
   kill (f);
 }
 
