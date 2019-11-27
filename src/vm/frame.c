@@ -6,10 +6,10 @@ void*
 frame_alloc (enum palloc_flags flags, struct spte *spte)
 {
   void *kpage = palloc_get_page(flags);
-  if(kapge)
+  if(kpage)
   {
     struct frame *f = malloc(sizeof(struct frame));
-    f->kapge = kpage;
+    f->kpage = kpage;
     f->thread = thread_current();
     f->spte = spte;
     list_push_back(&frame_table, &f->elem);
@@ -33,7 +33,7 @@ frame_evict ()
 }
 
 void
-frame_free(void *kapge)
+frame_free(void *kpage)
 {
   struct list_elem *e;
   for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))

@@ -303,7 +303,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (t->pagedir == NULL) 
     goto done;
 
-  hash_init(t->spt, hash_func, less_func, NULL);
+  hash_init(&t->spt, hash_func, less_func, NULL);
 
   process_activate ();
   
@@ -407,7 +407,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
 /* load() helpers. */
 
-static bool install_page (void *upage, void *kpage, bool writable);
+//static bool install_page (void *upage, void *kpage, bool writable);
 
 /* Checks whether PHDR describes a valid, loadable segment in
    FILE and returns true if so, false otherwise. */
@@ -493,6 +493,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	free(spte);
 	return false;
       }
+      spte->type = T_FILESYS;
       spte->upage = upage;
       spte->frame = NULL;
       spte->writable = writable;
@@ -542,6 +543,7 @@ setup_stack (void **esp)
   struct thread *t = thread_current();
 
   struct spte *spte = (struct spte*)malloc(sizeof(struct spte));
+  spte->type = T_FRAME;
   spte->upage =((uint8_t *)PHYS_BASE) - PGSIZE;
   spte->writable = true;
   spte->file = NULL;
@@ -551,7 +553,7 @@ setup_stack (void **esp)
   hash_insert(&t->spt, &spte->hash_elem);
 
 //kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  kpage = frame_alloc(PAL_USER | PAL_ZERO);
+  kpage = frame_alloc(PAL_USER | PAL_ZERO, spte);
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
@@ -559,7 +561,7 @@ setup_stack (void **esp)
         *esp = PHYS_BASE;
       else
      // palloc_free_page (kpage);
-        frame_free(kapge); 
+        frame_free(kpage); 
     }
   return success;
 }
@@ -573,7 +575,7 @@ setup_stack (void **esp)
    with palloc_get_page().
    Returns true on success, false if UPAGE is already mapped or
    if memory allocation fails. */
-static bool
+bool
 install_page (void *upage, void *kpage, bool writable)
 {
   struct thread *t = thread_current ();

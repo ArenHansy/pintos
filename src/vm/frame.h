@@ -12,9 +12,20 @@
 struct list frame_table;
 
 struct frame {
-  void *kapge;
+  void *kpage;
   void *upage;
   struct spte *spte;
   struct thread *thread;
   struct list_elem elem;
 };
+
+
+void* frame_alloc(enum palloc_flags flags, struct spte *spte);
+void frame_free(void *kpage);
+struct frame* frame_evict();
+
+
+
+
+#endif
+
