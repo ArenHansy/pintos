@@ -1,9 +1,6 @@
 #include <hash.h>
 
 
-
-
-
 static unsigned
 hash_func (const struct hash_elem *elem, void *aux UNUSED)
 {
@@ -22,4 +19,20 @@ less_func (const struct hash_elem *a, const struct hash_elem *b, void *aux UNUSE
   return false;
 }
 
+bool 
+load_frame()
+{
 
+}
+
+bool
+load_swap()
+{
+
+}
+
+bool
+load_filesys()
+{
+
+}

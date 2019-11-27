@@ -4,7 +4,12 @@
 #include <hash.h>
 #include "vm/frame.h"
 
+#define FRAME 1
+#define SWAP 2
+#define FILESYS 3
+
 struct spte {
+  int type;
   void *upage;
   struct frame *frame;
   bool pin;

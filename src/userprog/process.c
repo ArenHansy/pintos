@@ -488,7 +488,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
       struct spte *spte = (struct spte*)malloc(sizeof(struct spte));
-      if(!p)
+      if(!spte)
       {
 	free(spte);
 	return false;
@@ -548,7 +548,7 @@ setup_stack (void **esp)
   spte->offset = 0;
   spte->swap_index = -1;
   spte->read_bytes = 0;
-  hash_insert(t->spt, hash_func, less_func, NULL);
+  hash_insert(&t->spt, &spte->hash_elem);
 
 //kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   kpage = frame_alloc(PAL_USER | PAL_ZERO);
@@ -558,7 +558,8 @@ setup_stack (void **esp)
       if (success)
         *esp = PHYS_BASE;
       else
-        palloc_free_page (kpage);
+     // palloc_free_page (kpage);
+        frame_free(kapge); 
     }
   return success;
 }
