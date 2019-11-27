@@ -20,6 +20,8 @@
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
 #include "userprog/syscall.h"
+#include "vm/frame.h"
+#include "vm/page.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -300,6 +302,9 @@ load (const char *file_name, void (**eip) (void), void **esp)
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
     goto done;
+
+  hash_init(t->spt, hash_func, less_func, NULL);
+
   process_activate ();
   
   /* Open executable file. */
@@ -470,6 +475,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
+  
+  struct thread *t = thread_current();
 
   file_seek (file, ofs);
   while (read_bytes > 0 || zero_bytes > 0) 
@@ -480,30 +487,47 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
+      struct spte *spte = (struct spte*)malloc(sizeof(struct spte));
+      if(!spte)
+      {
+	free(spte);
+	return false;
+      }
+      spte->upage = upage;
+      spte->frame = NULL;
+      spte->writable = writable;
+      spte->file = file;
+      spte->offset = ofs;
+      spte->read_bytes = page_read_bytes;
+      spte->swap_index = -1;
+
+      hash_insert(&t->spt, &spte->hash_elem);
+
       /* Get a page of memory. */
-      uint8_t *kpage = palloc_get_page (PAL_USER);
+/*    uint8_t *kpage = palloc_get_page (PAL_USER);
       if (kpage == NULL)
         return false;
-
+*/
       /* Load this page. */
-      if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
+/*    if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
         {
           palloc_free_page (kpage);
           return false; 
         }
       memset (kpage + page_read_bytes, 0, page_zero_bytes);
-
+*/
       /* Add the page to the process's address space. */
-      if (!install_page (upage, kpage, writable)) 
+/*    if (!install_page (upage, kpage, writable)) 
         {
           palloc_free_page (kpage);
           return false; 
         }
-
+*/
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
       upage += PGSIZE;
+      ofs += page_read_bytes;
     }
   return true;
 }
@@ -515,15 +539,27 @@ setup_stack (void **esp)
 {
   uint8_t *kpage;
   bool success = false;
+  struct thread *t = thread_current();
 
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+  struct spte *spte = (struct spte*)malloc(sizeof(struct spte));
+  spte->upage =((uint8_t *)PHYS_BASE) - PGSIZE;
+  spte->writable = true;
+  spte->file = NULL;
+  spte->offset = 0;
+  spte->swap_index = -1;
+  spte->read_bytes = 0;
+  hash_insert(&t->spt, &spte->hash_elem);
+
+//kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+  kpage = frame_alloc(PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
         *esp = PHYS_BASE;
       else
-        palloc_free_page (kpage);
+     // palloc_free_page (kpage);
+        frame_free(kapge); 
     }
   return success;
 }
