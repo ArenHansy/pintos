@@ -1,11 +1,11 @@
 #include <hash.h>
 #include "vm/page.h"
+#include "vm/swap.h"
 #include "vm/frame.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/process.h"
-
-
+#include "threads/vaddr.h"
 
 unsigned
 hash_func (const struct hash_elem *elem, void *aux)
@@ -63,7 +63,7 @@ load_swap(struct spte *spte)
     frame_free(kpage);
     return false;
   }
-//  swap_in(spte->swap_index, spte->upage);
+  swap_in(spte->swap_index, spte->upage);
   return true;
 }
 
@@ -85,3 +85,46 @@ load_filesys(struct spte *spte)
   }
   return true;
 }
+
+bool
+grow_stack(void *upage)
+{
+  if(PHYS_BASE - pg_round_down(upage) > 0x800000)
+    return false;
+
+  struct spte *spte = malloc(sizeof(struct spte));
+
+  if(!spte)
+  {
+    free(spte);
+    return false;
+  } 
+
+  spte->upage = pg_round_down(upage);
+  spte->writable = true;
+  spte->pin = true;
+
+  void *kpage = frame_alloc(PAL_USER, spte);
+  if(!kpage)
+  {
+    free(spte);
+    return false;
+  }
+  
+  if(!install_page(spte->upage, kpage, spte->writable))
+  {
+    free(spte);
+    frame_free(kpage);
+    return false;
+  }
+
+  if (intr_context())
+    spte->pin = false;
+  
+  struct hash_elem *e = hash_insert(&thread_current()->spt, &spte->hash_elem);
+
+  if(!e)
+    return true;
+  return false;
+}
+

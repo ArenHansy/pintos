@@ -31,6 +31,7 @@ struct spte* get_spte(void *upage);
 bool load_frame(struct spte *spte);
 bool load_swap(struct spte *spte);
 bool load_filesys(struct spte *spte);
+bool grow_stack(void *upage);
 
 
 #endif

@@ -178,8 +178,9 @@ page_fault (struct intr_frame *f)
     }
     else
     {
-//      if(fault_addr >= ((f->esp)-32))
-//	load = grow_stack();  
+      // Stack Growth
+      if(fault_addr >= ((f->esp)-32))
+        load = grow_stack(fault_addr);  
     }
   }
 
