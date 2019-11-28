@@ -1,4 +1,9 @@
+#include <string.h>
 #include <hash.h>
+#include <threads/interrupt.h>
+#include <threads/malloc.h>
+#include <filesys/file.h>
+#include <userprog/pagedir.h>
 #include "vm/page.h"
 #include "vm/swap.h"
 #include "vm/frame.h"

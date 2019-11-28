@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_C_FLAGS -m32)
 set(CMAKE_CXX_FLAGS -m32)
-add_definitions(-DUSERPROG -DFILESYS)
+add_definitions(-DUSERPROG -DFILESYS -DVM)
 
 include_directories(.)
 include_directories(devices)
@@ -22,6 +22,7 @@ include_directories(tests/userprog)
 include_directories(tests/vm)
 include_directories(threads)
 include_directories(userprog)
+include_directories(vm)
 
 add_executable(src
         devices/block.c
@@ -349,4 +350,11 @@ add_executable(src
         userprog/tss.h
         utils/setitimer-helper.c
         utils/squish-pty.c
-        utils/squish-unix.c)
+        utils/squish-unix.c
+        vm/frame.c
+        vm/frame.h
+        vm/page.c
+        vm/page.h
+        vm/swap.c
+        vm/swap.h
+        )
