@@ -25,6 +25,18 @@ less_func (const struct hash_elem *a, const struct hash_elem *b, void *aux)
   return false;
 }
 
+void
+destroy_func(struct hash_elem *hash_elem, void *aux)
+{
+  struct spte *spte = hash_entry(hash_elem, struct spte, hash_elem);
+  if(spte->frame != NULL)
+  {
+    frame_free(pagedir_get_page(thread_current()->pagedir, spte->upage));
+    pagedir_clear_page(thread_current()->pagedir, spte->upage);
+  }
+  free(spte);
+}
+
 struct spte*
 get_spte(void *upage)
 {
@@ -36,7 +48,6 @@ get_spte(void *upage)
     return NULL;
   return hash_entry(e, struct spte, hash_elem);
 }
-
 
 bool 
 load_frame(struct spte *spte)
@@ -78,7 +89,7 @@ load_filesys(struct spte *spte)
     return false;
   }
   memset(kpage + (spte->read_bytes), 0, spte->zero_bytes);
-  if(install_page(spte->upage, kpage, spte->writable))
+  if(!install_page(spte->upage, kpage, spte->writable))
   {
     frame_free(kpage);
     return false;

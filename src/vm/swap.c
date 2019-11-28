@@ -2,6 +2,18 @@
 #include "devices/block.h"
 #include "threads/vaddr.h"
 
+void
+init_swap_table ()
+{
+  swap_block = block_get_role (BLOCK_SWAP);
+  if (!swap_block)
+    return;
+  swap_table = bitmap_create (block_size(swap_block) / (PGSIZE/BLOCK_SECTOR_SIZE));
+  if (!swap_table)
+    return;
+  bitmap_set_all(swap_table, true);
+}
+
 size_t swap_out (void *kpage)
 {
   size_t swap_index = bitmap_scan_and_flip(swap_table, 0, 1, true);

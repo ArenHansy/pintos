@@ -180,7 +180,9 @@ process_exit (void)
     file_close(f_e->file_ptr);
     free(f_e);
   }
-  
+
+  hash_destroy (&cur->spt, destroy_func); 
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;

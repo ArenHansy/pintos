@@ -27,6 +27,7 @@ struct spte {
 
 unsigned hash_func(const struct hash_elem *elem, void *aux);
 bool less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux);
+void destroy_func(struct hash_elem *elem, void *aux);
 struct spte* get_spte(void *upage);
 bool load_frame(struct spte *spte);
 bool load_swap(struct spte *spte);
