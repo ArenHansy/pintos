@@ -3,7 +3,10 @@
 
 #include <bitmap.h>
 #include "devices/block.h"
+#include "threads/vaddr.h"
+#include "threads/synch.h"
 
+struct lock swap_lock;
 
 struct block *swap_block;
 struct bitmap *swap_table;

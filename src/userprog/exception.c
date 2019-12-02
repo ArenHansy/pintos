@@ -9,8 +9,6 @@
 #include "vm/page.h"
 #include "userprog/syscall.h"
 
-#define USER_VADDR_BOTTOM ((void *)0x08048000)
-
 /* Number of page faults processed. */
 static long long page_fault_cnt;
 
@@ -227,10 +225,10 @@ page_fault (struct intr_frame *f)
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
 REAL_PAGE_FAULT:
- /*  if(!user) 
+/*   if(!user) 
    { 
      f->eip = (void *) f->eax;
-     f->eax = 0xffffffff;
+     f->eax = -1;//0xffffffff;
      return;
    }*/
  /* printf ("Page fault at %p: %s error %s page in %s context.\n",

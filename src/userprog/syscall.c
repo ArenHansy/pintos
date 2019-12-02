@@ -302,7 +302,7 @@ void sys_read (struct intr_frame * f) {
   
   fd = *(int*)(f->esp + 4);
   buffer = *(uint8_t**)(f->esp + 8);
-  size = *(unsigned*)(f->esp + 12);
+  size = *(unsigned*)(f->esp + 12); 
   file = get_file_from_fd(fd); 
   
   if(!validate_write(buffer, size)) kill_process();

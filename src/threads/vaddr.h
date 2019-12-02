@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <stdint.h>
 #include <stdbool.h>
+#define USER_VADDR_BOTTOM ((void *)0x08048000)
 
 #include "threads/loader.h"
 
