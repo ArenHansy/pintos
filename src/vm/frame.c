@@ -6,6 +6,8 @@
 #include "threads/palloc.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include "threads/malloc.h"
+#include "userprog/syscall.h"
 
 void*
 frame_alloc (enum palloc_flags flags, struct spte *spte)
@@ -26,8 +28,10 @@ frame_alloc (enum palloc_flags flags, struct spte *spte)
   else
   {
     while (!kpage)
+    {
       kpage = frame_evict(flags);
-
+      lock_release(&ft_lock);
+    }
     struct frame *f = malloc(sizeof(struct frame));
     if(!f)
       return NULL;
@@ -42,6 +46,7 @@ frame_alloc (enum palloc_flags flags, struct spte *spte)
 struct frame*
 frame_evict (enum palloc_flags flags)
 {
+  lock_acquire(&ft_lock);
   struct list_elem *e = list_begin(&frame_table);
   
   while(true)
@@ -55,8 +60,24 @@ frame_evict (enum palloc_flags flags)
 
       else
       {
-	//page dirty일 경우 구현 필요
-	//
+	if(f->spte->type == T_SWAP)
+	{	  
+ 	  f->spte->swap_index = swap_out(f->kpage);
+	}
+	else if(f->spte->type == T_FRAME)
+	{
+	  f->spte->type = T_SWAP;	
+	  f->spte->swap_index = swap_out(f->kpage);
+	}
+	else if(f->spte->type == T_FILESYS)
+	{
+          if(pagedir_is_dirty(t->pagedir,f->spte->upage))
+	  {
+	    lock_acquire(&file_lock);
+	    file_write_at(f->spte->file, f->kpage, f->spte->read_bytes, f->spte->offset);
+	    lock_release(&file_lock);
+	  }
+	}
 	f->spte->loaded = false;
 	list_remove(&f->elem);
 	pagedir_clear_page(t->pagedir, f->spte->upage);
@@ -74,6 +95,7 @@ frame_evict (enum palloc_flags flags)
 void
 frame_free(void *kpage)
 {
+  lock_acquire(&ft_lock);
   struct list_elem *e;
   for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e))
   {
@@ -84,7 +106,8 @@ frame_free(void *kpage)
       printf("rrrrrrrrr");
       palloc_free_page(f);
       free(f);
-      return;
+      break;
     }
   }
+  lock_release(&ft_lock);
 }

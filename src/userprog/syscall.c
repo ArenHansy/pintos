@@ -447,14 +447,17 @@ void
 sys_mmap (struct intr_frame * f) 
 {
   if(!validate_read(f->esp + 4, 8)) kill_process();
-
+ 
   int fd = *(int*)(f->esp + 4);
   void *addr = *(void**)(f->esp + 8);
   f->eax = do_mmap(fd, addr);
 }
 
 mapid_t 
-do_mmap(int fd, void *addr) {
+do_mmap(int fd, void *addr) { 
+  if(addr == NULL)
+    return -1;
+
   if (pg_ofs(addr) != 0)
     return -1;
 

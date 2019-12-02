@@ -11,6 +11,7 @@
 
 
 struct list frame_table;
+struct lock ft_lock;
 
 struct frame {
   void *kpage;

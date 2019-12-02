@@ -99,8 +99,8 @@ kill (struct intr_frame *f)
       printf ("%s: dying due to interrupt %#04x (%s).\n",
               thread_name (), f->vec_no, intr_name (f->vec_no));
       intr_dump_frame (f);
-     // thread_exit ();
-      sys_exit(f); 
+       thread_exit ();
+     // sys_exit(f);
 
     case SEL_KCSEG:
       /* Kernel's code segment, which indicates a kernel bug.
@@ -116,6 +116,8 @@ kill (struct intr_frame *f)
       printf ("Interrupt %#04x (%s) in unknown segment %04x\n",
              f->vec_no, intr_name (f->vec_no), f->cs);
       thread_exit ();
+     // sys_exit(f);  
+
     }
 }
 
@@ -158,7 +160,7 @@ page_fault (struct intr_frame *f)
   not_present = (f->error_code & PF_P) == 0;
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
-  
+
   bool load = false;
 
 //  printf("aaa");
@@ -166,9 +168,8 @@ page_fault (struct intr_frame *f)
     goto REAL_PAGE_FAULT;
 //  printf("bbb");  
   if(not_present && (fault_addr > USER_VADDR_BOTTOM) && is_user_vaddr(fault_addr))
-//  if(not_present)
   {
-     // printf("ccc");
+  //    printf("ccc");
 
     struct spte *spte = get_spte(fault_addr);
     if(spte)
@@ -192,14 +193,13 @@ page_fault (struct intr_frame *f)
       }
   //      printf("hhh");
       spte->pin = false;
-      return;
     }
     else
     {
       // Stack Growth
-  //      printf("iii");
+  //     printf("iii");
       //
-      if(fault_addr >= ((f->esp)-32))// && is_user_vaddr(fault_addr)){
+      if(fault_addr >= ((f->esp)-32))
       {
 //	       printf("jjj");
         load = grow_stack(fault_addr);
@@ -227,6 +227,12 @@ page_fault (struct intr_frame *f)
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
 REAL_PAGE_FAULT:
+ /*  if(!user) 
+   { 
+     f->eip = (void *) f->eax;
+     f->eax = 0xffffffff;
+     return;
+   }*/
  /* printf ("Page fault at %p: %s error %s page in %s context.\n",
           fault_addr,
           not_present ? "not present" : "rights violation",
