@@ -25,6 +25,8 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+#define INIT_MAP_ID 1
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -112,6 +114,8 @@ struct thread
     unsigned magic;                     /* Detects stack overflow. */
 
     struct hash spt;
+    int next_mapid;
+    struct list mmfs;
   };
 
 /* If false (default), use round-robin scheduler.

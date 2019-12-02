@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <list.h>
+#include <lib/user/syscall.h>
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "filesys/directory.h"
@@ -37,5 +38,9 @@ void sys_write (struct intr_frame * f);
 void sys_seek (struct intr_frame * f);
 void sys_tell (struct intr_frame * f);
 void sys_close (struct intr_frame * f);
+void sys_mmap (struct intr_frame * f);
+mapid_t do_mmap (int fd, void *addr);
+void sys_munmap (struct intr_frame * f);
+void do_munmap (mapid_t mapid);
 
 #endif /* userprog/syscall.h */

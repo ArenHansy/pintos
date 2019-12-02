@@ -44,7 +44,7 @@ process_execute (const char *file_name)
     return TID_ERROR;
   memset(fn_copy, 0, PGSIZE);
   strlcpy (fn_copy, file_name, PGSIZE);
-  
+// printf("111111111111111111111111111"); 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (strtok_r(fn_copy, " ", &save_ptr), PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
@@ -58,6 +58,7 @@ process_execute (const char *file_name)
 static void
 start_process (void *file_name_)
 {
+//	printf("5555555555555555555555");
   int file_name_len;
   char *token;
   char *save_ptr;
@@ -180,7 +181,8 @@ process_exit (void)
     file_close(f_e->file_ptr);
     free(f_e);
   }
-
+  for (mapid_t mapid = INIT_MAP_ID; mapid < cur->next_mapid; mapid++)
+    do_munmap(mapid);
   hash_destroy (&cur->spt, destroy_func); 
 
   /* Destroy the current process's page directory and switch back
@@ -292,7 +294,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    Returns true if successful, false otherwise. */
 bool
 load (const char *file_name, void (**eip) (void), void **esp) 
-{
+{// printf("1111111111111111111111111111111");
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
@@ -477,7 +479,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
-  
+
+// printf("aaaaaaaaaaaaaaaaaaaaaaaaa"); 
   struct thread *t = thread_current();
 
   file_seek (file, ofs);
@@ -491,10 +494,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
       struct spte *spte = (struct spte*)malloc(sizeof(struct spte));
       if(!spte)
-      {
-	free(spte);
 	return false;
-      }
       spte->type = T_FILESYS;
       spte->upage = upage;
       spte->frame = NULL;
@@ -502,6 +502,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       spte->file = file;
       spte->offset = ofs;
       spte->read_bytes = page_read_bytes;
+      spte->zero_bytes = page_zero_bytes;
       spte->swap_index = -1;
 
       hash_insert(&t->spt, &spte->hash_elem);
@@ -540,6 +541,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp) 
 {
+//	printf("ppppppppppppppppppp");
   uint8_t *kpage;
   bool success = false;
   struct thread *t = thread_current();
@@ -552,7 +554,16 @@ setup_stack (void **esp)
   spte->offset = 0;
   spte->swap_index = -1;
   spte->read_bytes = 0;
+  spte->zero_bytes = PGSIZE;
+
   hash_insert(&t->spt, &spte->hash_elem);
+/*
+  bool success = grow_stack(((uint8_t *) PHYS_BASE) - PGSIZE);
+  if (success)
+    *esp = PHYS_BASE;
+  else
+    return success;
+  */  
 
 //kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   kpage = frame_alloc(PAL_USER | PAL_ZERO, spte);

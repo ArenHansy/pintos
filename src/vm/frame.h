@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <list.h>
+#include <stdlib.h>
 
 
 struct list frame_table;
@@ -22,7 +23,7 @@ struct frame {
 
 void* frame_alloc(enum palloc_flags flags, struct spte *spte);
 void frame_free(void *kpage);
-struct frame* frame_evict();
+struct frame* frame_evict(enum palloc_flags flags);
 
 
 

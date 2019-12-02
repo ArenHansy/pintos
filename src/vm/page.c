@@ -45,10 +45,10 @@ destroy_func(struct hash_elem *hash_elem, void *aux)
 struct spte*
 get_spte(void *upage)
 {
-  struct spte *spte_tmp;
+  struct spte spte_tmp;
   struct thread *t = thread_current();
-  spte_tmp->upage = pg_round_down(upage);
-  struct hash_elem *e = hash_find(&t->spt, &spte_tmp->hash_elem);
+  spte_tmp.upage = pg_round_down(upage);
+  struct hash_elem *e = hash_find(&t->spt, &spte_tmp.hash_elem);
   if(!e)
     return NULL;
   return hash_entry(e, struct spte, hash_elem);
@@ -65,6 +65,7 @@ load_frame(struct spte *spte)
     frame_free(kpage);
     return false;
   }
+  spte->loaded = true;
   return true;
 }
 
@@ -80,6 +81,7 @@ load_swap(struct spte *spte)
     return false;
   }
   swap_in(spte->swap_index, spte->upage);
+  spte->loaded = true;
   return true;
 }
 
@@ -99,26 +101,26 @@ load_filesys(struct spte *spte)
     frame_free(kpage);
     return false;
   }
+  spte->loaded = true;
   return true;
 }
 
 bool
 grow_stack(void *upage)
 {
-  if(PHYS_BASE - pg_round_down(upage) > 0x800000)
+  if((size_t) (PHYS_BASE - pg_round_down(upage)) > (1<<23))
     return false;
 
   struct spte *spte = malloc(sizeof(struct spte));
 
   if(!spte)
-  {
-    free(spte);
-    return false;
-  } 
+    return false; 
 
+  spte->type = T_SWAP;
   spte->upage = pg_round_down(upage);
   spte->writable = true;
   spte->pin = true;
+  spte->loaded = true;
 
   void *kpage = frame_alloc(PAL_USER, spte);
   if(!kpage)
@@ -142,5 +144,18 @@ grow_stack(void *upage)
   if(!e)
     return true;
   return false;
+}
+
+
+void page_free(struct spte* spte)
+{
+  struct thread *cur = thread_current();
+  struct hash spt = cur->spt;
+  if (hash_delete(&spt, &spte->hash_elem)) 
+  {
+    frame_free(spte->frame->kpage);
+    pagedir_clear_page(cur->pagedir, spte->upage);
+  }
+  free(spte);
 }
 

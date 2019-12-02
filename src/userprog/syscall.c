@@ -7,7 +7,10 @@
 #include "userprog/signal.h"
 #include "userprog/process.h"
 #include "threads/malloc.h"
+#include <string.h>
+#include <vm/page.h>
 #include "threads/vaddr.h"
+#include "pagedir.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -30,7 +33,9 @@ static void (*syscall_table[20])(struct intr_frame*) = {
   sys_write,
   sys_seek,
   sys_tell,
-  sys_close
+  sys_close,
+  sys_mmap,
+  sys_munmap
 }; // syscall jmp table
 
 /* Reads a byte at user virtual address UADDR.
@@ -420,3 +425,128 @@ void sys_close (struct intr_frame * f) {
     }
   }
 }
+
+
+struct mmf*
+get_mmf_from_mapid (mapid_t mapid)
+{
+  struct list_elem *e;
+  struct thread *t = thread_current();
+  struct mmf *mmf_elem;
+
+  for (e = list_begin (&t->mmfs); e != list_end (&t->mmfs); e = list_next (e))
+  {
+     mmf_elem = list_entry (e, struct mmf, elem);
+     if(mmf_elem->mapid == mapid)
+       return mmf_elem;
+  }
+  return NULL;
+}
+
+void
+sys_mmap (struct intr_frame * f) 
+{
+  if(!validate_read(f->esp + 4, 8)) kill_process();
+
+  int fd = *(int*)(f->esp + 4);
+  void *addr = *(void**)(f->esp + 8);
+  f->eax = do_mmap(fd, addr);
+}
+
+mapid_t 
+do_mmap(int fd, void *addr) {
+  if (pg_ofs(addr) != 0)
+    return -1;
+
+  struct file* file = get_file_from_fd(fd);
+  if (!file || file_length(file) == 0)
+    return -1;
+
+  struct file* reopen_file = file_reopen(file);
+  if (!reopen_file)
+    return -1;
+
+  struct mmf *mmf = malloc(sizeof(struct mmf));
+  if (!mmf)
+    return -1;
+
+  memset (mmf, 0, sizeof(struct mmf));
+  list_init(&mmf->sptes);
+
+  struct thread *cur = thread_current();
+  mmf->file = reopen_file;
+  mmf->mapid = cur->next_mapid++;
+  list_push_back(&cur->mmfs, &mmf->elem);
+ 
+  int remain = file_length(mmf->file);
+  int offset = 0;
+  void *upage = addr;
+  while (remain > 0)
+  {
+    if (get_spte(upage))
+    {
+      do_munmap(mmf->mapid);
+      return -1;
+    }
+    struct spte *spte = malloc (sizeof (struct spte));
+    if (!spte)
+    {
+       do_munmap(mmf->mapid);
+       return -1;
+    }
+    memset (spte, 0, sizeof (struct spte));
+    spte->type = T_FILESYS;
+    spte->writable = true;
+    spte->upage = upage;
+    spte->offset = offset;
+    spte->read_bytes = remain < PGSIZE ? remain : PGSIZE;
+    spte->zero_bytes = PGSIZE - spte->read_bytes;
+    spte->file = mmf->file;
+
+    list_push_back (&mmf->sptes, &spte->mmf_elem);
+    hash_insert(&cur->spt, &spte->hash_elem);
+    
+    upage += PGSIZE;
+    offset += spte->read_bytes;
+    remain -= spte->read_bytes;
+  }
+  return mmf->mapid;
+}
+
+void 
+sys_munmap (struct intr_frame * f)
+{
+  if(!validate_read(f->esp + 4, 4)) kill_process();
+  mapid_t mapid = *(mapid_t*)(f->esp + 4);
+  do_munmap(mapid);
+}
+
+void
+do_munmap(mapid_t mapid)
+{
+  struct mmf* mmf = get_mmf_from_mapid(mapid);
+  if (!mmf)
+    return;
+	  
+  struct thread *cur = thread_current();
+  struct list_elem *e = list_begin(&mmf->sptes);
+  while (e != list_end (&mmf->sptes)) 
+  {
+    struct spte *spte = list_entry (e, struct spte, mmf_elem);
+    if (pagedir_is_dirty(cur->pagedir, spte->upage)) 
+    {
+      lock_acquire(&file_lock);
+      file_write_at (spte->file, spte->upage, spte->read_bytes, spte->offset);
+      lock_release(&file_lock);
+    }
+    page_free(spte);
+    e = list_remove (e);
+  }
+  list_remove(&mmf->elem);
+  lock_acquire(&file_lock);
+  file_close(mmf->file);
+  lock_release(&file_lock);
+  free(mmf);
+}
+
+

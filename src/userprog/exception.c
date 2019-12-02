@@ -7,6 +7,9 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "vm/page.h"
+#include "userprog/syscall.h"
+
+#define USER_VADDR_BOTTOM ((void *)0x08048000)
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -96,7 +99,8 @@ kill (struct intr_frame *f)
       printf ("%s: dying due to interrupt %#04x (%s).\n",
               thread_name (), f->vec_no, intr_name (f->vec_no));
       intr_dump_frame (f);
-      thread_exit (); 
+     // thread_exit ();
+      sys_exit(f); 
 
     case SEL_KCSEG:
       /* Kernel's code segment, which indicates a kernel bug.
@@ -156,38 +160,61 @@ page_fault (struct intr_frame *f)
   user = (f->error_code & PF_U) != 0;
   
   bool load = false;
+
+//  printf("aaa");
+  if(!not_present)
+    goto REAL_PAGE_FAULT;
+//  printf("bbb");  
   if(not_present && (fault_addr > USER_VADDR_BOTTOM) && is_user_vaddr(fault_addr))
+//  if(not_present)
   {
+     // printf("ccc");
+
     struct spte *spte = get_spte(fault_addr);
     if(spte)
-    { 
+    { // printf("ddd");
+
       spte->pin = true;
       switch(spte->type)
       {
         case T_FRAME:
+//	  printf("eee");
 	  load = load_frame(spte);
 	  break;
 	case T_SWAP:
+  //        printf("fff");
 	  load = load_swap(spte);
 	  break;
 	case T_FILESYS:
+//	    printf("ggg");
 	  load = load_filesys(spte);
 	  break;
       }
+  //      printf("hhh");
       spte->pin = false;
+      return;
     }
     else
     {
       // Stack Growth
-      if(fault_addr >= ((f->esp)-32))
-        load = grow_stack(fault_addr);  
+  //      printf("iii");
+      //
+      if(fault_addr >= ((f->esp)-32))// && is_user_vaddr(fault_addr)){
+      {
+//	       printf("jjj");
+        load = grow_stack(fault_addr);
+//	  printf("kkk");
+      }
     }
   }
-
+//  printf("lll");
+  
   if(!load)
     goto REAL_PAGE_FAULT;
   else
     return;
+//  printf("mmm");
+    
 /*
   if(!user) {
     f->error_code = 0;
@@ -200,12 +227,12 @@ page_fault (struct intr_frame *f)
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
 REAL_PAGE_FAULT:
-  printf ("Page fault at %p: %s error %s page in %s context.\n",
+ /* printf ("Page fault at %p: %s error %s page in %s context.\n",
           fault_addr,
           not_present ? "not present" : "rights violation",
           write ? "writing" : "reading",
           user ? "user" : "kernel");
-  
+ */
   kill (f);
 }
 
