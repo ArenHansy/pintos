@@ -100,9 +100,7 @@ thread_init (void)
   list_init (&all_list);
   
   list_init (&frame_table);
-  init_swap_table();
   lock_init(&ft_lock);
-  lock_init(&swap_lock);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();

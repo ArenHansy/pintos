@@ -45,6 +45,8 @@ static void (*syscall_table[20])(struct intr_frame*) = {
 static int
 get_user (const uint8_t *uaddr)
 {
+  if(uaddr < USER_VADDR_BOTTOM)
+    return -1;
   int result;
   asm ("movl $1f, %0; movzbl %1, %0; 1:"
         : "=&a" (result) : "m" (*uaddr));
@@ -57,6 +59,8 @@ get_user (const uint8_t *uaddr)
 static bool
 put_user (uint8_t *udst, uint8_t byte)
 {
+  if(udst < USER_VADDR_BOTTOM)
+    return false;
   int error_code;
   asm ("movl $1f, %0; movb %b2, %1; 1:"
         : "=&a" (error_code), "=m" (*udst) : "q" (byte));
@@ -81,7 +85,7 @@ struct file* get_file_from_fd(int fd) {
 
 bool validate_read(void *p, int size) {
   int i = 0;
-  if(p >= PHYS_BASE || p + size >= PHYS_BASE) return false;
+  if(p >= PHYS_BASE || p + size >= PHYS_BASE || p < USER_VADDR_BOTTOM) return false;
   for(i = 0; i < size; i++) {
     if(get_user(p + i) == -1)
       return false;
@@ -91,7 +95,7 @@ bool validate_read(void *p, int size) {
 
 bool validate_write(void *p, int size) {
   int i = 0;
-  if(p >= PHYS_BASE || p + size >= PHYS_BASE) return false;
+  if(p >= PHYS_BASE || p + size >= PHYS_BASE || p < USER_VADDR_BOTTOM) return false;
   for(i = 0; i < size; i++) {
     if(put_user(p + i, 0) == false)
       return false;
@@ -302,7 +306,8 @@ void sys_read (struct intr_frame * f) {
   
   fd = *(int*)(f->esp + 4);
   buffer = *(uint8_t**)(f->esp + 8);
-  size = *(unsigned*)(f->esp + 12); 
+  size = *(unsigned*)(f->esp + 12);
+
   file = get_file_from_fd(fd); 
   
   if(!validate_write(buffer, size)) kill_process();

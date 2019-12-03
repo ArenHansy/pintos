@@ -5,6 +5,7 @@
 void
 init_swap_table ()
 {
+  lock_init(&swap_lock);
   swap_block = block_get_role (BLOCK_SWAP);
   if (!swap_block)
     return;

@@ -547,6 +547,7 @@ setup_stack (void **esp)
   struct thread *t = thread_current();
 
   struct spte *spte = (struct spte*)malloc(sizeof(struct spte));
+ 
   spte->type = T_FRAME;
   spte->upage =((uint8_t *)PHYS_BASE) - PGSIZE;
   spte->writable = true;
