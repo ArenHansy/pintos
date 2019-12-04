@@ -103,7 +103,6 @@ frame_free(void *kpage)
     if(f->kpage == kpage)
     {
       list_remove(e);
-      printf("rrrrrrrrr");
       palloc_free_page(f);
       free(f);
       break;
