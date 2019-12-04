@@ -119,7 +119,7 @@ check_buffer(void *buffer, int size, void *esp)
     
     bool load = false;
     struct spte *spte = get_spte(buffer+i);
-    spte->pin = false;
+    spte->pin = true;
     if(!spte)
       return false;
 
@@ -130,13 +130,13 @@ check_buffer(void *buffer, int size, void *esp)
     }
 
     if(spte->type == T_FRAME)
-      load_frame(spte);
+      load = load_frame(spte);
     else if(spte->type == T_SWAP)
-      load_swap(spte);
+      load = load_swap(spte);
     else 
-      load_filesys(spte);
+      load = load_filesys(spte);
 
-    load = spte->loaded;
+    spte->pin = false;
 
 load_check:
     if(!load)
@@ -386,8 +386,9 @@ void sys_write (struct intr_frame * f) {
   fd = *(int*)(f->esp + 4);
   buffer = *(char**)(f->esp + 8);
   size = *(unsigned*)(f->esp + 12);
+
   file = get_file_from_fd(fd);
-  
+
   if(!validate_read(buffer, size)) kill_process();
   
   if(fd == 0) {
@@ -586,7 +587,8 @@ do_munmap(mapid_t mapid)
       file_write_at (spte->file, spte->upage, spte->read_bytes, spte->offset);
       lock_release(&file_lock);
     }
-    page_free(spte);
+   // page_free(spte);
+    hash_delete(&cur->spt, &spte->hash_elem);
     e = list_remove (e);
   }
   list_remove(&mmf->elem);

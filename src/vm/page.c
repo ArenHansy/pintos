@@ -89,6 +89,8 @@ bool
 load_filesys(struct spte *spte)
 {
   void *kpage = frame_alloc(PAL_USER, spte);
+  if(!kpage)
+    return false;
   file_seek(spte->file, spte->offset);
   if((int)spte->read_bytes != file_read(spte->file, kpage, spte->read_bytes))
   {
