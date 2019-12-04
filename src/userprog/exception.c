@@ -237,6 +237,6 @@ REAL_PAGE_FAULT:
           write ? "writing" : "reading",
           user ? "user" : "kernel");
  */
-  kill (f);
+  kill_process ();
 }
 
