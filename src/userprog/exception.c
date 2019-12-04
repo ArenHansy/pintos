@@ -165,39 +165,40 @@ page_fault (struct intr_frame *f)
   if(!not_present)
     goto REAL_PAGE_FAULT;
 //  printf("bbb");  
-  if(not_present && (fault_addr > USER_VADDR_BOTTOM) && is_user_vaddr(fault_addr))
+  if (not_present && (fault_addr > USER_VADDR_BOTTOM) && is_user_vaddr(fault_addr))
   {
-  //    printf("ccc");
+//    printf("ccc");
 
     struct spte *spte = get_spte(fault_addr);
-    if(spte)
-    { // printf("ddd");
+    if (spte)
+    {
+// printf("ddd");
 
       spte->pin = true;
-      switch(spte->type)
+      switch (spte->type)
       {
         case T_FRAME:
 //	  printf("eee");
-	  load = load_frame(spte);
-	  break;
-	case T_SWAP:
-  //        printf("fff");
-	  load = load_swap(spte);
-	  break;
-	case T_FILESYS:
+          load = load_frame(spte);
+          break;
+        case T_SWAP:
+//        printf("fff");
+          load = load_swap(spte);
+          break;
+        case T_FILESYS:
 //	    printf("ggg");
-	  load = load_filesys(spte);
-	  break;
+          load = load_filesys(spte);
+          break;
       }
-  //      printf("hhh");
+//      printf("hhh");
       spte->pin = false;
     }
     else
     {
       // Stack Growth
-  //     printf("iii");
+      //     printf("iii");
       //
-      if(fault_addr >= ((f->esp)-32))
+      if (fault_addr >= ((f->esp) - 32))
       {
 //	       printf("jjj");
         load = grow_stack(fault_addr);
@@ -206,13 +207,13 @@ page_fault (struct intr_frame *f)
     }
   }
 //  printf("lll");
-  
-  if(!load)
+
+  if (!load)
     goto REAL_PAGE_FAULT;
   else
     return;
 //  printf("mmm");
-    
+
 /*
   if(!user) {
     f->error_code = 0;
