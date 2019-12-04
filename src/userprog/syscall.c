@@ -85,7 +85,7 @@ struct file* get_file_from_fd(int fd) {
 
 bool validate_read(void *p, int size) {
   int i = 0;
-  if(p >= PHYS_BASE || p + size >= PHYS_BASE || p < USER_VADDR_BOTTOM) return false;
+  if(p >= PHYS_BASE || p + size >= PHYS_BASE) return false;
   for(i = 0; i < size; i++) {
     if(get_user(p + i) == -1)
       return false;
@@ -95,7 +95,7 @@ bool validate_read(void *p, int size) {
 
 bool validate_write(void *p, int size) {
   int i = 0;
-  if(p >= PHYS_BASE || p + size >= PHYS_BASE || p < USER_VADDR_BOTTOM) return false;
+  if(p >= PHYS_BASE || p + size >= PHYS_BASE) return false;
   for(i = 0; i < size; i++) {
     if(put_user(p + i, 0) == false)
       return false;
@@ -107,6 +107,42 @@ void kill_process() {
   send_signal(-1, SIG_WAIT);
   printf ("%s: exit(%d)\n", thread_current()->name, -1);
   thread_exit();
+}
+
+bool
+check_buffer(void *buffer, int size, void *esp)
+{
+  for(int i = 0; i < size; i++)
+  {
+    if(!is_user_vaddr(buffer+i) || buffer+i < USER_VADDR_BOTTOM)
+      return false;
+    
+    bool load = false;
+    struct spte *spte = get_spte(buffer+i);
+    spte->pin = false;
+    if(!spte)
+      return false;
+
+    if(buffer+i >= esp - 32)
+    {
+      load = grow_stack(buffer+i);
+      goto load_check;
+    }
+
+    if(spte->type == T_FRAME)
+      load_frame(spte);
+    else if(spte->type == T_SWAP)
+      load_swap(spte);
+    else 
+      load_filesys(spte);
+
+    load = spte->loaded;
+
+load_check:
+    if(!load)
+      return false;
+  }
+  return true;
 }
 
 void
@@ -303,10 +339,12 @@ void sys_read (struct intr_frame * f) {
   struct file *file;
   
   if(!validate_read(f->esp + 4, 12)) kill_process();
-  
+    
   fd = *(int*)(f->esp + 4);
   buffer = *(uint8_t**)(f->esp + 8);
   size = *(unsigned*)(f->esp + 12);
+  
+  if(!check_buffer(buffer, size, f->esp)) kill_process();
 
   file = get_file_from_fd(fd); 
   
