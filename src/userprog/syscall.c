@@ -119,9 +119,9 @@ check_buffer(void *buffer, int size, void *esp)
     
     bool load = false;
     struct spte *spte = get_spte(buffer+i);
-    spte->pin = true;
     if(!spte)
       return false;
+    spte->pin = true;
 
     if(buffer+i >= esp - 32)
     {
@@ -344,8 +344,6 @@ void sys_read (struct intr_frame * f) {
   buffer = *(uint8_t**)(f->esp + 8);
   size = *(unsigned*)(f->esp + 12);
   
-  if(!check_buffer(buffer, size, f->esp)) kill_process();
-
   file = get_file_from_fd(fd); 
   
   if(!validate_write(buffer, size)) kill_process();
