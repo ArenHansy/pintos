@@ -507,6 +507,7 @@ do_mmap(int fd, void *addr) {
     spte->writable = true;
     spte->upage = upage;
     spte->offset = offset;
+    spte->pin = true;
     spte->read_bytes = remain < PGSIZE ? remain : PGSIZE;
     spte->zero_bytes = PGSIZE - spte->read_bytes;
     spte->file = mmf->file;
