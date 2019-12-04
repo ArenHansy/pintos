@@ -29,6 +29,7 @@ frame_alloc (enum palloc_flags flags, struct spte *spte)
   {
     while (!kpage)
     {
+      lock_acquire(&ft_lock);
       kpage = frame_evict(flags);
       lock_release(&ft_lock);
     }
@@ -46,44 +47,34 @@ frame_alloc (enum palloc_flags flags, struct spte *spte)
 struct frame*
 frame_evict (enum palloc_flags flags)
 {
-  lock_acquire(&ft_lock);
   struct list_elem *e = list_begin(&frame_table);
-  
-  while(true)
-  {
+
+  while (true) {
     struct frame *f = list_entry(e, struct frame, elem);
-    if(f->spte->pin == false)
-    {
+    if (f->spte->pin == false) {
       struct thread *t = f->thread;
-      if(pagedir_is_accessed (t->pagedir, f->spte->upage))
+      if (pagedir_is_accessed(t->pagedir, f->spte->upage))
         pagedir_set_accessed(t->pagedir, f->spte->upage, false);
 
-      else
-      {
-	if(f->spte->type == T_SWAP)
-	{	  
- 	  f->spte->swap_index = swap_out(f->kpage);
-	}
-	else if(f->spte->type == T_FRAME)
-	{
-	  f->spte->type = T_SWAP;	
-	  f->spte->swap_index = swap_out(f->kpage);
-	}
-	else if(f->spte->type == T_FILESYS)
-	{
-          if(pagedir_is_dirty(t->pagedir,f->spte->upage))
-	  {
-	    lock_acquire(&file_lock);
-	    file_write_at(f->spte->file, f->kpage, f->spte->read_bytes, f->spte->offset);
-	    lock_release(&file_lock);
-	  }
-	}
-	f->spte->loaded = false;
-	list_remove(&f->elem);
-	pagedir_clear_page(t->pagedir, f->spte->upage);
-	palloc_free_page(f->kpage);
-   	free(f);
-	return palloc_get_page(flags);
+      else {
+        if (f->spte->type == T_SWAP) {
+          f->spte->swap_index = swap_out(f->kpage);
+        } else if (f->spte->type == T_FRAME) {
+          f->spte->type = T_SWAP;
+          f->spte->swap_index = swap_out(f->kpage);
+        } else if (f->spte->type == T_FILESYS) {
+          if (pagedir_is_dirty(t->pagedir, f->spte->upage)) {
+            lock_acquire(&file_lock);
+            file_write_at(f->spte->file, f->kpage, f->spte->read_bytes, f->spte->offset);
+            lock_release(&file_lock);
+          }
+        }
+        f->spte->loaded = false;
+        list_remove(&f->elem);
+        pagedir_clear_page(t->pagedir, f->spte->upage);
+        palloc_free_page(f->kpage);
+        free(f);
+        return palloc_get_page(flags);
       }
     }
     e = list_next(e);
