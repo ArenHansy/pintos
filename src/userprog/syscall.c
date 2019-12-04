@@ -551,9 +551,9 @@ do_munmap(mapid_t mapid)
     e = list_remove (e);
   }
   list_remove(&mmf->elem);
-  lock_acquire(&file_lock);
-  file_close(mmf->file);
-  lock_release(&file_lock);
+//  lock_acquire(&file_lock);
+//  file_close(mmf->file);
+//  lock_release(&file_lock);
   free(mmf);
 }
 
